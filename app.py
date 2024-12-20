@@ -4,7 +4,6 @@ import requests
 import pymongo
 from datetime import datetime, timedelta
 
-
 # Get details of all cities from mongo collection
 # Database: weather db
 # Collection: city_coordinates
@@ -12,7 +11,8 @@ def get_all_cities():
     print('Getting city coordinates')
 
     # Connect to MongoDB and details for all cities
-    client = pymongo.MongoClient(os.getenv('MONGO_URL','mongodb://localhost:27017/'))
+    client = pymongo.MongoClient(
+        os.getenv('MONGO_URL', 'mongodb://localhost:27017/'))
     db = client['weather_db']
     collection = db['city_coordinates']
 
@@ -22,7 +22,6 @@ def get_all_cities():
     for result in results:
         all_cities.append(result)
     return all_cities
-
 
 # Get data from source (open-meteo)
 def read_weather_data(city, start_date, end_date):
@@ -39,9 +38,11 @@ def read_weather_data(city, start_date, end_date):
             "hourly": ["temperature_2m", "precipitation", "rain"],
             "start_date": start_date,
             "end_date": end_date
-        } 
-        response = requests.get('https://api.open-meteo.com/v1/forecast', params=params)
-        response.raise_for_status()  # Raise an exception if the response status code is not 200
+        }
+        response = requests.get(
+            'https://api.open-meteo.com/v1/forecast', params=params)
+        # Raise an exception if the response status code is not 200
+        response.raise_for_status()
         weather_data = response.json()
         return weather_data
     except requests.exceptions.RequestException as e:
@@ -73,7 +74,6 @@ def process_weather_data(city_name, date, weather_data):
     document['data'] = data
     return document
 
-
 # Load data into Mongodb
 def load_weather_data(weather_data_list, start_date):
     """
@@ -83,14 +83,13 @@ def load_weather_data(weather_data_list, start_date):
     """
     print(f'Loading Weather Data into MongoDB for date: {start_date}')
     try:
-        client = pymongo.MongoClient(os.getenv('MONGO_URL','mongodb://localhost:27017/'))
+        client = pymongo.MongoClient(
+            os.getenv('MONGO_URL', 'mongodb://localhost:27017/'))
         db = client['weather_db']
         collection = db['city_weather_hourly']
         collection.insert_many(weather_data_list)
     except pymongo.errors.ConnectionError as e:
         print(f"Error connecting to MongoDB: {e}")
-
-
 
 def delete_weather_data(start_date):
     """
@@ -99,11 +98,11 @@ def delete_weather_data(start_date):
        Collection: city_weather_hourly
     """
     print(f'Deleting Weather Data from MongoDB for date: {start_date}')
-    client = pymongo.MongoClient(os.getenv('MONGO_URL','mongodb://localhost:27017/'))
+    client = pymongo.MongoClient(
+        os.getenv('MONGO_URL', 'mongodb://localhost:27017/'))
     db = client['weather_db']
     collection = db['city_weather_hourly']
     collection.delete_many({"date": start_date})
-
 
 def get_pipeline_checkpoint():
     """
@@ -113,16 +112,16 @@ def get_pipeline_checkpoint():
     """
     print('Getting pipeline checkpoint details')
     try:
-        client = pymongo.MongoClient(os.getenv('MONGO_URL','mongodb://localhost:27017/'))
+        client = pymongo.MongoClient(
+            os.getenv('MONGO_URL', 'mongodb://localhost:27017/'))
         db = client['weather_db']
         collection = db['pipeline_checkpoints']
-        result = collection.find_one({"pipeline_name": "weather_data_ingestion"})
+        result = collection.find_one(
+            {"pipeline_name": "weather_data_ingestion"})
         return result
     except pymongo.errors.ConnectionError as e:
         print(f"Error connecting to MongoDB: {e}")
         return None
-
-
 
 def update_pipeline_checkpoint(weather_data_list, start_date):
     """
@@ -132,7 +131,8 @@ def update_pipeline_checkpoint(weather_data_list, start_date):
     """
 
     print(f'Updating pipeline checkpoint details for date: {start_date}')
-    client = pymongo.MongoClient(os.getenv('MONGO_URL','mongodb://localhost:27017/'))
+    client = pymongo.MongoClient(
+        os.getenv('MONGO_URL', 'mongodb://localhost:27017/'))
     db = client['weather_db']
     collection = db['pipeline_checkpoints']
 
@@ -145,7 +145,8 @@ def update_pipeline_checkpoint(weather_data_list, start_date):
         last_next_run = datetime.strptime(result['next_run'], '%Y-%m-%d')
         next_run = last_next_run + timedelta(days=1)
     else:
-        next_run = datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=1)
+        next_run = datetime.strptime(
+            start_date, '%Y-%m-%d') + timedelta(days=1)
 
     next_run = next_run.strftime('%Y-%m-%d')
 
@@ -176,7 +177,6 @@ def update_pipeline_checkpoint(weather_data_list, start_date):
             "comments": f"Successfully ingested data for all configured cities for {start_date}."
         })
 
-
 def add_pipeline_run_history(weather_data_list, start_date, job_run_start_time):
     """
        Add pipeline run history details in Mongodb
@@ -185,7 +185,8 @@ def add_pipeline_run_history(weather_data_list, start_date, job_run_start_time):
     """
 
     print(f'Adding pipeline run history details for date: {start_date}')
-    client = pymongo.MongoClient(os.getenv('MONGO_URL','mongodb://localhost:27017/'))
+    client = pymongo.MongoClient(
+        os.getenv('MONGO_URL', 'mongodb://localhost:27017/'))
     db = client['weather_db']
     collection = db['pipeline_run_history']
     pipeline_run_data = {
@@ -209,11 +210,11 @@ def add_pipeline_run_history(weather_data_list, start_date, job_run_start_time):
 
     collection.insert_one(pipeline_run_data)
 
-
 def load_baseline_data():
     print('Loading baseline data')
     try:
-        client = pymongo.MongoClient(os.getenv('MONGO_URL','mongodb://localhost:27017/'))
+        client = pymongo.MongoClient(
+            os.getenv('MONGO_URL', 'mongodb://localhost:27017/'))
         db = client['weather_db']
         collection = db['city_weather_hourly']
         collection.delete_many({})
@@ -229,7 +230,6 @@ def load_baseline_data():
     except pymongo.errors.ConnectionError as e:
         print(f"Error connecting to MongoDB: {e}")
 
-
 def weather_data_pipeline():
     job_run_start_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
     all_cities = get_all_cities()
@@ -240,27 +240,28 @@ def weather_data_pipeline():
         # Check if checkpoint ['next_run'] is greater than current date
         # If yes, then exit the pipeline
 
-       if datetime.strptime(checkpoint['next_run'], '%Y-%m-%d') > datetime.now() - timedelta(days=2):
-           print('No new data to process. Exiting the pipeline.')
-           return False, checkpoint['next_run']
+        if datetime.strptime(checkpoint['next_run'], '%Y-%m-%d') > datetime.now() - timedelta(days=2):
+            print('No new data to process. Exiting the pipeline.')
+            return False, checkpoint['next_run']
 
-       start_date = checkpoint['next_run']   
-       end_date = checkpoint['next_run']
+        start_date = checkpoint['next_run']
+        end_date = checkpoint['next_run']
     else:
-        start_date= os.getenv('BASELINE_DATE', '2024-06-01')
+        start_date = os.getenv('BASELINE_DATE', '2024-06-01')
         end_date = os.getenv('BASELINE_DATE', '2024-06-01')
 
     for city in all_cities:
         weather_data = read_weather_data(city, start_date, end_date)
-        weater_data_processed = process_weather_data(city['city'], start_date, weather_data)
+        weater_data_processed = process_weather_data(
+            city['city'], start_date, weather_data)
         weather_data_list.append(weater_data_processed)
         delete_weather_data(start_date)
         load_weather_data(weather_data_list, start_date)
-        update_pipeline_checkpoint (weather_data_list, start_date)
-        add_pipeline_run_history(weather_data_list, start_date, job_run_start_time)
+        update_pipeline_checkpoint(weather_data_list, start_date)
+        add_pipeline_run_history(
+            weather_data_list, start_date, job_run_start_time)
 
         return True, start_date
-
 
 def main():
     print('In main function')
@@ -269,7 +270,6 @@ def main():
         load_baseline_data()
     else:
         weather_data_pipeline()
-
 
 if __name__ == '__main__':
     print('Invoking Main function')
